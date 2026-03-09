@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Antonio:wght@700&family=Archivo+Narrow:wght@500;600;700&display=swap');
+@import url('lenis/dist/lenis.css');
+
+:root {
+  --font-antonio: 'Antonio', sans-serif;
+  --font-archivo: 'Archivo Narrow', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  font-family: var(--font-archivo);
+  background: #ffffff;
+  color: #111;
+  overflow-x: hidden;
+}
+
+html.lenis {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .nike-heading {
+    font-family: var(--font-antonio);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.08em;
+    line-height: 0.85;
+  }
+
+  .nike-body {
+    font-family: var(--font-archivo);
+    font-weight: 500;
+  }
+}
