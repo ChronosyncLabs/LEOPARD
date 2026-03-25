@@ -32,7 +32,7 @@ jobs:
             echo "domain=thames.chronosynclabs.com.np"          >> $GITHUB_OUTPUT
             echo "docker_tag=main"                              >> $GITHUB_OUTPUT
             echo "container_name=leopard-prod"                  >> $GITHUB_OUTPUT
-            echo "host_port=80"                                 >> $GITHUB_OUTPUT
+            echo "host_port=3000"                                 >> $GITHUB_OUTPUT
 
           elif [[ "$BRANCH" == "dev" ]]; then
             echo "ssh_host=${{ secrets.DEV_SSH_HOST }}"        >> $GITHUB_OUTPUT
