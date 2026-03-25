@@ -29,14 +29,14 @@ jobs:
 
           if [[ "$BRANCH" == "main" ]]; then
             echo "ssh_host=${{ secrets.PROD_SSH_HOST }}"       >> $GITHUB_OUTPUT
-            echo "domain=abc.com"                               >> $GITHUB_OUTPUT
+            echo "domain=thames.chronosynclabs.com.np"          >> $GITHUB_OUTPUT
             echo "docker_tag=main"                              >> $GITHUB_OUTPUT
             echo "container_name=leopard-prod"                  >> $GITHUB_OUTPUT
             echo "host_port=80"                                 >> $GITHUB_OUTPUT
 
           elif [[ "$BRANCH" == "dev" ]]; then
             echo "ssh_host=${{ secrets.DEV_SSH_HOST }}"        >> $GITHUB_OUTPUT
-            echo "domain=dev.abc.com"                           >> $GITHUB_OUTPUT
+            echo "domain=thames1.chronosynclabs.com.np"         >> $GITHUB_OUTPUT
             echo "docker_tag=dev"                               >> $GITHUB_OUTPUT
             echo "container_name=leopard-dev"                   >> $GITHUB_OUTPUT
             echo "host_port=3001"                               >> $GITHUB_OUTPUT
@@ -45,7 +45,7 @@ jobs:
             # Sanitize: feature/my-thing → feature-my-thing (matches DockerHub tag)
             SANITIZED=$(echo "$BRANCH" | sed 's/\//-/g')
             echo "ssh_host=${{ secrets.FEATURE_SSH_HOST }}"    >> $GITHUB_OUTPUT
-            echo "domain=feature.abc.com"                       >> $GITHUB_OUTPUT
+            echo "domain=thames2.chronosynclabs.com.np"         >> $GITHUB_OUTPUT
             echo "docker_tag=$SANITIZED"                        >> $GITHUB_OUTPUT
             echo "container_name=leopard-feature"               >> $GITHUB_OUTPUT
             echo "host_port=3002"                               >> $GITHUB_OUTPUT
@@ -81,7 +81,7 @@ jobs:
               -p $PORT:3000 \
               $IMAGE
 
-            echo ">>> Deployed $IMAGE to ${{ steps.env.outputs.domain }} ✅"
+            echo ">>> Deployed $IMAGE → https://${{ steps.env.outputs.domain }} ✅"
 
             # Optional: remove dangling old images to free disk space
             docker image prune -f
