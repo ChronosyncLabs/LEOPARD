@@ -46,6 +46,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Cache layers from DockerHub to speed up subsequent builds
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/nike-tiger-landing:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/nike-tiger-landing:buildcache,mode=max
+          # Cache layers using GitHub Actions cache (avoids DockerHub token scope issues)
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
