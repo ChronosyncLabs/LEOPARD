@@ -6,39 +6,35 @@ on:
       - '**'   # Triggers on push to ANY branch
 
 jobs:
+  # ─────────────────────────────────────────
+  # JOB 1: Build image and push to DockerHub
+  # ─────────────────────────────────────────
   build-and-push:
     name: Build & Push to DockerHub
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository code
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: Set up Docker Buildx (enables advanced build features & caching)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Step 3: Log in to DockerHub using secrets
       - name: Log in to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Step 4: Extract metadata for tagging (branch name + commit SHA)
       - name: Extract Docker Metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/nike-tiger-landing
           tags: |
-            # Tag with sanitized branch name (e.g. main, feature-xyz)
             type=ref,event=branch
-            # Tag with short commit SHA (e.g. sha-a1b2c3d)
             type=sha,prefix=sha-,format=short
 
-      # Step 5: Build the Docker image and push to DockerHub
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
@@ -46,6 +42,80 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Cache layers using GitHub Actions cache (avoids DockerHub token scope issues)
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────────────────
+  # JOB 2: Deploy to server (runs after Job 1 succeeds)
+  # ─────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: build-and-push   # waits for Job 1 to finish successfully
+
+    steps:
+      # Resolve which server/tag/port to use based on branch
+      - name: Resolve Environment & Docker Tag
+        id: env
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          echo "Branch: $BRANCH"
+
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "ssh_host=${{ secrets.PROD_SSH_HOST }}"    >> $GITHUB_OUTPUT
+            echo "domain=thames.chronosynclabs.com.np"      >> $GITHUB_OUTPUT
+            echo "docker_tag=main"                          >> $GITHUB_OUTPUT
+            echo "container_name=leopard-prod"              >> $GITHUB_OUTPUT
+            echo "host_port=3000"                           >> $GITHUB_OUTPUT
+
+          elif [[ "$BRANCH" == "dev" ]]; then
+            echo "ssh_host=${{ secrets.DEV_SSH_HOST }}"     >> $GITHUB_OUTPUT
+            echo "domain=thames1.chronosynclabs.com.np"     >> $GITHUB_OUTPUT
+            echo "docker_tag=dev"                           >> $GITHUB_OUTPUT
+            echo "container_name=leopard-dev"               >> $GITHUB_OUTPUT
+            echo "host_port=3001"                           >> $GITHUB_OUTPUT
+
+          elif [[ "$BRANCH" == feature/* ]]; then
+            # Sanitize: feature/my-thing → feature-my-thing (matches DockerHub tag)
+            SANITIZED=$(echo "$BRANCH" | sed 's/\//-/g')
+            echo "ssh_host=${{ secrets.FEATURE_SSH_HOST }}" >> $GITHUB_OUTPUT
+            echo "domain=thames2.chronosynclabs.com.np"     >> $GITHUB_OUTPUT
+            echo "docker_tag=$SANITIZED"                    >> $GITHUB_OUTPUT
+            echo "container_name=leopard-feature"           >> $GITHUB_OUTPUT
+            echo "host_port=3002"                           >> $GITHUB_OUTPUT
+
+          else
+            echo "Branch '$BRANCH' has no deploy target. Skipping."
+            exit 0
+          fi
+
+      # SSH into server and update the running container
+      - name: SSH & Deploy
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host:     ${{ steps.env.outputs.ssh_host }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/nike-tiger-landing:${{ steps.env.outputs.docker_tag }}"
+            CONTAINER="${{ steps.env.outputs.container_name }}"
+            PORT="${{ steps.env.outputs.host_port }}"
+
+            echo ">>> Pulling latest image: $IMAGE"
+            docker pull $IMAGE
+
+            echo ">>> Stopping old container: $CONTAINER"
+            docker stop $CONTAINER 2>/dev/null || true
+            docker rm   $CONTAINER 2>/dev/null || true
+
+            echo ">>> Starting new container on port $PORT"
+            docker run -d \
+              --name $CONTAINER \
+              --restart unless-stopped \
+              -p $PORT:3000 \
+              $IMAGE
+
+            echo ">>> ✅ Deployed → https://${{ steps.env.outputs.domain }}"
+
+            # Free disk space from old unused images
+            docker image prune -f
