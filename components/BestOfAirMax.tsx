@@ -5,7 +5,7 @@ import { useRef } from 'react';
 const products = [
   {
     id: 1,
-    name: 'Nike Air Max Pulse',
+    name: 'Reebok Pulse',
     category: "Men's Shoes",
     price: '₹ 13,995',
     image: '/products/air-max-pulse.jpg',
